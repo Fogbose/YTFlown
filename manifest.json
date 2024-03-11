@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "YTFlown",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Visualize insights of your recommended flow on YouTube and act upon them with explainable facilitators.",
 
     "permissions": [
