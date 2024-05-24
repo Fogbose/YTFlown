@@ -17,8 +17,12 @@ function extractVideoIDs() {
   const videoElements = document.querySelectorAll('a#thumbnail');
   const videoIDs = Array.from(videoElements)
     .map((el) => {
-      const url = new URL(el.href);
-      return url.searchParams.get('v');
+      try {
+        const url = new URL(el.href);
+        return url.searchParams.get('v');
+      } catch (e) {
+        return null;
+      }
     })
     .filter((id) => id);
   return videoIDs;
