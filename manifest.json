@@ -24,7 +24,8 @@
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/watch?v=*"],
-      "js": ["scripts/content.js"]
+      "js": ["scripts/content.js"],
+      "css": ["scss/style.css"]
     }
   ],
 
@@ -33,5 +34,12 @@
     "32": "assets/images/icon-32.png",
     "48": "assets/images/icon-64.png",
     "128": "assets/images/icon-128.png"
-  }
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["*://*.youtube.com/*"]
+    }
+  ]
 }
