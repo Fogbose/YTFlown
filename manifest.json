@@ -9,7 +9,8 @@
     "storage",
     "scripting",
     "webRequest",
-    "webNavigation"
+    "webNavigation",
+    "identity"
   ],
   "host_permissions": ["*://*.youtube.com/watch?v=*"],
 
@@ -47,5 +48,10 @@
       "resources": ["assets/*"],
       "matches": ["*://*.youtube.com/*"]
     }
-  ]
+  ],
+
+  "oauth2": {
+    "client_id": "68548725295-obafe1f3amq4mvurjk6o8dt6te8svlo7.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/youtube.force-ssl"]
+  }
 }
