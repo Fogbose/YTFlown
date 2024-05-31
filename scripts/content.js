@@ -1,10 +1,3 @@
-// Mutation Observer Configuration for 'watch next' recommandations
-// section
-// /!\ Placed at front of the script to avoid late initialisation of
-// the observer /!\
-var targetNode = document.body;
-var config = { childList: true, subtree: true };
-
 // Function to create and return a 'Not Interested' button
 function createNotInterestedButton(className, clickHandler) {
   const button = document.createElement('button');
@@ -28,7 +21,13 @@ function addButtonToThumbnails() {
     if (thumbnail.querySelector('.not-interested-button')) return;
 
     const button = createNotInterestedButton('thumbnail', () => {
-      alert('Button clicked');
+      const videoId = thumbnail.querySelector('a').href.split('=')[1];
+      console.log(videoId);
+      chrome.runtime.sendMessage({
+        action: 'notInterested',
+        type: 'recommendation',
+        videoId,
+      });
     });
 
     thumbnail.appendChild(button);
@@ -42,7 +41,13 @@ function addButtonToEngagementPannel(engagementPannel) {
     !engagementPannel.querySelector('.not-interested-button.engagement-pannel')
   ) {
     const button = createNotInterestedButton('engagement-pannel', () => {
-      alert('Vidéo marquée comme pas intéressée !');
+      const videoId = getCurrentVideoId();
+      console.log(videoId);
+      chrome.runtime.sendMessage({
+        action: 'notInterested',
+        type: 'video',
+        videoId,
+      });
     });
 
     const textParagraph = document.createElement('p');
@@ -61,6 +66,11 @@ function addButtonToEngagementPannel(engagementPannel) {
   }
 }
 
+function getCurrentVideoId() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('v');
+}
+
 // Utility function to wait for a DOM element and then execute a callback
 function waitForDOMElement(selector, callback) {
   const element = document.querySelector(selector);
@@ -74,7 +84,7 @@ function waitForDOMElement(selector, callback) {
 // Initialize MutationObserver for thumbnails
 function initializeMutationObserver() {
   const observer = new MutationObserver(addButtonToThumbnails);
-  observer.observe(targetNode, config);
+  observer.observe(document.body, { childList: true, subtree: true });
 }
 
 // Initialize button addition for engagement panel

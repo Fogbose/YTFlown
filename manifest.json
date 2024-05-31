@@ -1,10 +1,16 @@
 {
   "manifest_version": 3,
   "name": "YTFlown",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Chrome plugin for YouTube that makes mechanisms immediately available to the user to correct recommendations when they are wrong and give them a greater impact.",
 
-  "permissions": ["activeTab", "storage", "scripting"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "webRequest",
+    "webNavigation"
+  ],
   "host_permissions": ["*://*.youtube.com/watch?v=*"],
 
   "action": {
