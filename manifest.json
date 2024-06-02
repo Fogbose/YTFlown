@@ -12,7 +12,7 @@
     "webNavigation",
     "identity"
   ],
-  "host_permissions": ["*://*.youtube.com/watch?v=*"],
+  "host_permissions": ["*://*.youtube.com/*"],
 
   "action": {
     "default_popup": "popup/index.html",
@@ -30,7 +30,7 @@
 
   "content_scripts": [
     {
-      "matches": ["*://*.youtube.com/watch?v=*"],
+      "matches": ["*://*.youtube.com/*"],
       "js": ["scripts/content.js"],
       "css": ["scss/style.css"]
     }
