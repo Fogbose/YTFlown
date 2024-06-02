@@ -4,39 +4,44 @@ function createNotInterestedButton(className, clickHandler) {
   button.className = `not-interested-button ${className}`;
 
   const icon = document.createElement('img');
+  icon.className = 'deactivate';
   icon.src = chrome.runtime.getURL('assets/images/dash-circle.svg');
   icon.alt = 'Not Interested';
 
+  const activateIcon = document.createElement('img');
+  activateIcon.className = 'activate';
+  activateIcon.src = chrome.runtime.getURL(
+    'assets/images/dash-circle-fill.svg'
+  );
+  activateIcon.alt = 'Not Interested';
+  activateIcon.style.display = 'none';
+
   button.appendChild(icon);
+  button.appendChild(activateIcon);
   button.addEventListener('click', clickHandler);
 
   return button;
 }
 
-// Function to configure the click handler
-function configureClickHandler(action, type) {
-  const videoId = getCurrentVideoId();
-  chrome.runtime.sendMessage(
-    {
-      action: action,
-      type: type,
-      videoId,
-    },
-    (response) => {
-      if (response.action === 'actionCompleted') {
-        console.log(`Call action in response to {videoId}`);
-      } else if (response.action === 'actionFailed') {
-        console.log(`Failed: Error in feedback process for {videoId}.`);
-      }
-    }
-  );
-}
-
 // Function to add 'Not Interested' button to engagement panel
 function addButtonToEngagementPannel(engagementPannel) {
-  const button = createNotInterestedButton('engagement-pannel', () =>
-    configureClickHandler('notInterested', 'video')
-  );
+  const button = createNotInterestedButton('engagement-pannel', () => {
+    const videoId = getCurrentVideoId();
+    chrome.runtime.sendMessage(
+      {
+        action: 'notInterested',
+        type: 'video',
+        videoId,
+      },
+      (response) => {
+        if (response.action === 'actionCompleted') {
+          console.log(`Call action in response to {videoId}`);
+        } else if (response.action === 'actionFailed') {
+          console.log(`Failed: Error in feedback process for {videoId}.`);
+        }
+      }
+    );
+  });
 
   const textParagraph = document.createElement('p');
   textParagraph.textContent = 'Not Interested';
@@ -57,45 +62,62 @@ function addButtonToEngagementPannel(engagementPannel) {
 function addButtonToThumbnail(thumbnail) {
   if (thumbnail.querySelector('.not-interested-button')) return;
 
-  const button = createNotInterestedButton('thumbnail', () =>
-    configureClickHandler('notInterested', 'recommendation')
-  );
+  const button = createNotInterestedButton('thumbnail', () => {
+    const videoId = thumbnail.querySelector('a').href.split('=')[1];
+    chrome.runtime.sendMessage(
+      {
+        action: 'notInterested',
+        type: 'recommendation',
+        videoId,
+      },
+      (response) => {
+        if (response.action === 'actionCompleted') {
+          replaceThumbnailWithFeedbackBanner(thumbnail);
+        } else if (response.action === 'actionFailed') {
+          console.log(`Failed: Error in feedback process for {videoId}.`);
+        }
+      }
+    );
+  });
 
   thumbnail.appendChild(button);
 }
 
 // Function to replace a thumbnail element with a feedback banner
-function replaceThumbnailWithFeedbackBanner(thumbnail, button) {
+function replaceThumbnailWithFeedbackBanner(thumbnail) {
   const banner = document.createElement('div');
   banner.className = 'feedback-banner';
   const thumbnailImgSrc = thumbnail.querySelector('img').src;
+  const videoId = thumbnail.querySelector('a').href.split('=')[1];
 
   banner.innerHTML = `
       <img src="${thumbnailImgSrc}" alt="Thumbnail">
-      <p>You will receive less similar content.</p>
-      <button class="cancel-action-button">Cancel</button>
+      <div class="text-button-container">
+        <p>You will receive less similar content.</p>
+        <button class="cancel-action-button">Cancel</button>
+      </div>
     `;
 
-  /**
-    const cancelButton = banneer.querySelector('.cancel-action-button');
-    cancelButton.addEventListener('click', () => {
-      chrome.runtime.sendMessage(
-        {
-          action: 'cancelAction',
-          type: 'recommandation',
-          videoId,
-        },
-        (response) => {
-          if (response.action === 'cancelCompleted') {
-            console.log(`Cancelled action for video ${videoId}`);
-            thumbnail.innerHTML = originalThumbnailContent;
-          } else if (response.action === 'cancelFailed') {
-            console.log(`Cancel action failed for video ${videoId}`);
-          }
+  const cancelButton = banner.querySelector('.cancel-action-button');
+  cancelButton.addEventListener('click', () => {
+    chrome.runtime.sendMessage(
+      {
+        action: 'cancelAction',
+        type: 'recommendation',
+        videoId,
+      },
+      (response) => {
+        if (response.action === 'actionCompleted') {
+          console.log(`Cancelled 'not interested' signal for video ${videoId}`);
+          banner.parentNode.replaceChild(thumbnail, banner);
+        } else if (response.action === 'actionFailed') {
+          console.log(
+            `Cancelled 'not interested' signal failed for video ${videoId}`
+          );
         }
-      );
-    });
-    */
+      }
+    );
+  });
 
   thumbnail.parentNode.replaceChild(banner, thumbnail);
 }

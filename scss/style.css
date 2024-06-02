@@ -37,6 +37,50 @@
   stroke-width: '2px';
 }
 
-ytd-compact-video-renderer {
-  position: relative;
+.feedback-banner {
+  background-color: #ffffff;
+  border: 2px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0;
+}
+
+.feedback-banner img {
+  max-width: 120px;
+  max-height: 67px;
+  border-radius: 8px;
+}
+
+.feedback-banner .text-button-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 20px;
+}
+
+.feedback-banner p {
+  flex-grow: 1;
+  margin: 10px 0 10px 0;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.cancel-action-button {
+  background-color: #ffffff;
+  color: #065fd4;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 15px;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.cancel-action-button:hover {
+  background-color: #def1ff;
 }
