@@ -1,5 +1,13 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   chrome.identity.getAuthToken({ interactive: true }, async (token) => {
+    if (chrome.runtime.lastError) {
+      console.error('Error getting auth token:', chrome.runtime.lastError);
+      sendResponse({
+        action: 'actionFailed',
+        error: chrome.runtime.lastError.message,
+      });
+    }
+
     const headers = new Headers();
     headers.append('Authorization', `Bearer ${token}`);
     headers.append('Content-type', 'application/json');
@@ -25,40 +33,60 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function sendYTSignal(videoId, action, type, headers) {
-  if (action === 'notInterested') {
-    if (type === 'video') {
-      await sendNotInterestedSignal(videoId, headers);
-      await sendDontRecommendChannelSignal(videoId, headers);
-      //await sendDislikeSignal(videoId, headers);
-      await sendRemoveFromHistorySignal(videoId, headers);
-    } else if (type === 'recommendation') {
-      await sendNotInterestedSignal(videoId, headers);
-      await sendDontRecommendChannelSignal(videoId, headers);
-      //await sendDislikeSignal(videoId, headers);
+  try {
+    if (action === 'notInterested') {
+      if (type === 'video') {
+        await Promise.all([
+          sendNotInterestedSignal(videoId, headers),
+          sendDontRecommendChannelSignal(videoId, headers),
+          //sendDislikeSignal(videoId, headers),
+          sendRemoveFromHistorySignal(videoId, headers),
+        ]);
+      } else if (type === 'recommendation') {
+        await Promise.all([
+          sendNotInterestedSignal(videoId, headers),
+          sendDontRecommendChannelSignal(videoId, headers),
+          //sendDislikeSignal(videoId, headers),
+        ]);
+      }
+    } else if (action === 'cancelAction') {
+      if (type === 'video') {
+        await Promise.all([
+          cancelNotInterestedSignal(videoId, headers),
+          cancelDontRecommendChannelSignal(videoId, headers),
+          //cancelDislikeSignal(videoId, headers),
+          cancelRemoveFromHistorySignal(videoId, headers),
+        ]);
+      } else if (type === 'recommendation') {
+        await Promise.all([
+          cancelNotInterestedSignal(videoId, headers),
+          cancelDontRecommendChannelSignal(videoId, headers),
+          //cancelDislikeSignal(videoId, headers),
+        ]);
+      }
     }
-  } else if (action === 'cancelAction') {
-    if (type === 'video') {
-      await cancelNotInterestedSignal(videoId, headers);
-      await cancelDontRecommendChannelSignal(videoId, headers);
-      //await cancelDislikeSignal(videoId, headers);
-      await cancelRemoveFromHistorySignal(videoId, headers);
-    } else if (type === 'recommendation') {
-      await cancelNotInterestedSignal(videoId, headers);
-      await cancelDontRecommendChannelSignal(videoId, headers);
-      //await cancelDislikeSignal(videoId, headers);
-    }
+  } catch (error) {
+    console.error('Error in SendYTSignal:', error);
+    throw error;
   }
 }
 
 async function sendYTRequest(url, headers) {
-  fetch(url, {
-    method: 'POST',
-    headers: headers,
-  })
-    .then((response) => {
-      console.log(response);
-    })
-    .catch((error) => console.error('Error:', error));
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    console.log('Response:', response);
+  } catch (error) {
+    console.log('Error in sendYTRequest:', error);
+    throw error;
+  }
 }
 
 async function sendNotInterestedSignal(videoId, headers) {
