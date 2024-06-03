@@ -27,7 +27,12 @@ function getCurrentVideoId() {
 
 // Get the id of the video for a thumbnail
 function getThumbnailVideoId(thumbnail) {
-  return thumbnail.querySelector('a').href.split('=')[1];
+  return new URL(thumbnail.querySelector('a').href).searchParams.get('v');
+}
+
+// Get the image source for thumbnail of a video
+function getThumbnailImgSrc(videoId) {
+  return `https://img.youtube.com/vi/${videoId}/0.jpg`;
 }
 
 //**************************************************************************** */
@@ -65,26 +70,29 @@ function createNotInterestedButton(className, clickHandler) {
 
 // Create the message to background script
 function createMessageToBackground(action, type, videoId, feedback) {
-  chrome.runtime.sendMessage(
-    {
-      action: action,
-      type: type,
-      videoId,
-    },
-    (response) => {
-      if (response.action === 'actionComleted') {
-        feedback();
-      } else if (response.action === 'actionFailed') {
-        console.log('Failed: Error in feedback process.');
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      {
+        action: action,
+        type: type,
+        videoId,
+      },
+      (response) => {
+        if (response.action === 'actionComleted') {
+          resolve(feedback ? feedback() : response.result);
+        } else if (response.action === 'actionFailed') {
+          reject(response.error || 'Failed: Error in feedback process');
+        }
       }
-    }
-  );
+    );
+  });
 }
 
 // Function to create and return a feeback banner to 'Not Interested' action
 function createFeedbackBanner(className, thumbnailImgSrc, clickHandler) {
   const banner = document.createElement('div');
   banner.className = `feedback-banner ${className}`;
+  banner.style.display = 'none';
 
   const img = document.createElement('img');
   img.src = thumbnailImgSrc;
@@ -116,12 +124,14 @@ function createFeedbackBanner(className, thumbnailImgSrc, clickHandler) {
 function addButtonToEngagementPannel() {
   const engagementPannel = getEngagementPanel();
 
+  if (engagementPannel.querySelector('.not-interested-button')) return;
+
   const button = createNotInterestedButton('engagement-pannel', () =>
     createMessageToBackground(
       'notInterested',
       'video',
       getCurrentVideoId(),
-      createEngagementPannelFeedback(engagementPannel)
+      toggleEngagementPannelBanner()
     )
   );
 
@@ -144,7 +154,7 @@ function addButtonToThumbnail(thumbnail) {
       'notInterested',
       'recommendation',
       getThumbnailVideoId(thumbnail),
-      createThumbnailFeedback(thumbnail)
+      toggleThumbnailWithBanner(thumbnail)
     )
   );
 
@@ -153,17 +163,50 @@ function addButtonToThumbnail(thumbnail) {
   thumbnail.appendChild(button);
 }
 
-//**************************************************************************** */
+// Function to add feedback banner under engagement pannel
+function addFeebackBannerUnderEngagementPannel() {
+  const middleRow = getMiddleRow();
 
-// Creation of the engagement pannel feedback following user action
-function createEngagementPannelFeedback() {
-  toggleIcon(getEngagementPanel().querySelector('ytd-menu-renderer > button'));
-  addFeebackBannerUnderEngagementPannel(getInfoBox());
+  if (middleRow.querySelector('.feedback-banner')) return;
+
+  const banner = createFeedbackBanner(
+    'middle-row',
+    getThumbnailImgSrc(getCurrentVideoId())
+  );
+
+  banner.querySelector('button').style.display = 'none';
+
+  middleRow.appendChild(banner);
 }
 
-// Creation of thumbnail feedback following user action
-function createThumbnailFeedback(thumbnail) {
-  replaceThumbnailWithFeedbackBanner(thumbnail);
+// Function to add feedback banner to thumbnails
+function addFeedbackBannerToThumbnail(thumbnail) {
+  if (thumbnail.parentNode.querySelector('.feedback-banner')) return;
+
+  const banner = createFeedbackBanner(
+    'thumbnail-banner',
+    getThumbnailImgSrc(getThumbnailVideoId(thumbnail)),
+    () =>
+      createMessageToBackground(
+        'cancelAction',
+        'recommendation',
+        getThumbnailVideoId(thumbnail),
+        toggleThumbnailWithBanner(thumbnail)
+      )
+  );
+
+  thumbnail.parentNode.appendChild(banner);
+}
+
+//**************************************************************************** */
+
+// Toggle the Engagement Pannel Banner
+function toggleEngagementPannelBanner() {
+  const banner = getMiddleRow().querySelector('.feedback-banner');
+  const button = getEngagementPanel().querySelector('button');
+
+  toggleIcon(button);
+  banner.style.display = banner.style.display === 'none' ? 'block' : 'none';
 }
 
 // Toggle the Icon of the button
@@ -180,22 +223,22 @@ function toggleIcon(button) {
   }
 }
 
-// Function to replace a thumbnail element with a feedback banner
-function replaceThumbnailWithFeedbackBanner(thumbnail) {
-  const banner = createFeedbackBanner(
-    'thumbnail-banner',
-    thumbnail.querySelector('img').src,
-    () =>
-      createMessageToBackground(
-        'cancelAction',
-        'recommendation',
-        getThumbnailVideoId(thumbnail),
-        banner.parentNode.replaceChild(thumbnail, banner)
-      )
-  );
+// Toggle between thumbnail and feedback banner
+function toggleThumbnailWithBanner(thumbnail) {
+  const banner = thumbnail.parentNode.querySelector('.feedback-banner');
 
-  thumbnail.parentNode.replaceChild(banner, thumbnail);
+  if (!banner) return;
+
+  if (banner.style.display === 'none') {
+    thumbnail.style.display = 'none';
+    banner.style.display = 'block';
+  } else {
+    thumbnail.removeAttribute('style');
+    banner.style.display = 'none';
+  }
 }
+
+//**************************************************************************** */
 
 // Callback function for MutationObserver
 function onPageChange(mutationList, observer) {
@@ -212,6 +255,7 @@ function onPageChange(mutationList, observer) {
           // Creation of 'Not interested' button to engagement pannel
           // while available.
           addButtonToEngagementPannel();
+          addFeebackBannerUnderEngagementPannel();
         }
       });
 
@@ -235,10 +279,14 @@ function onPageChange(mutationList, observer) {
         addButtonToThumbnail(
           mutation.target.closest('ytd-compact-video-renderer > #dismissible')
         );
+        addFeedbackBannerToThumbnail(
+          mutation.target.closest('ytd-compact-video-renderer > #dismissible')
+        );
       }
     }
   }
 }
+toggleThumbnailWithBanner;
 
 // Mutation Observer configuration to interact with YouTube SPA
 // in order to react to dynamic DOM events
@@ -252,3 +300,5 @@ const observerConfig = {
 const targetNode = document.getElementById('page-manager');
 const observer = new MutationObserver(onPageChange);
 observer.observe(targetNode, observerConfig);
+
+//**************************************************************************** */
