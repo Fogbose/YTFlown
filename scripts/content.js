@@ -3,10 +3,11 @@ function createNotInterestedButton(className, clickHandler) {
   const button = document.createElement('button');
   button.className = `not-interested-button ${className}`;
 
-  const icon = document.createElement('img');
-  icon.className = 'deactivate';
-  icon.src = chrome.runtime.getURL('assets/images/dash-circle.svg');
-  icon.alt = 'Not Interested';
+  const deactivateIcon = document.createElement('img');
+  deactivateIcon.className = 'deactivate';
+  deactivateIcon.src = chrome.runtime.getURL('assets/images/dash-circle.svg');
+  deactivateIcon.alt = 'Not Interested';
+  deactivateIcon.style.display = 'block';
 
   const activateIcon = document.createElement('img');
   activateIcon.className = 'activate';
@@ -16,7 +17,7 @@ function createNotInterestedButton(className, clickHandler) {
   activateIcon.alt = 'Not Interested';
   activateIcon.style.display = 'none';
 
-  button.appendChild(icon);
+  button.appendChild(deactivateIcon);
   button.appendChild(activateIcon);
   button.addEventListener('click', clickHandler);
 
@@ -35,7 +36,7 @@ function addButtonToEngagementPannel(engagementPannel) {
       },
       (response) => {
         if (response.action === 'actionCompleted') {
-          console.log(`Call action in response to {videoId}`);
+          createEngagementPannelFeedback(engagementPannel);
         } else if (response.action === 'actionFailed') {
           console.log(`Failed: Error in feedback process for {videoId}.`);
         }
@@ -72,7 +73,7 @@ function addButtonToThumbnail(thumbnail) {
       },
       (response) => {
         if (response.action === 'actionCompleted') {
-          replaceThumbnailWithFeedbackBanner(thumbnail);
+          createThumbnailFeedback(thumbnail);
         } else if (response.action === 'actionFailed') {
           console.log(`Failed: Error in feedback process for {videoId}.`);
         }
@@ -81,6 +82,51 @@ function addButtonToThumbnail(thumbnail) {
   });
 
   thumbnail.appendChild(button);
+}
+
+// Creation of the engagement pannel feedback following user action
+function createEngagementPannelFeedback(engagementPannel) {
+  toggleIcon(engagementPannel.querySelector('ytd-menu-renderer > button'));
+  addFeebackBannerUnderEngagementPannel(
+    engagementPannel.closest('#below > ytd-watch-metadata')
+  );
+}
+
+// Creation of thumbnail feedback following user action
+function createThumbnailFeedback(thumbnail) {
+  replaceThumbnailWithFeedbackBanner(thumbnail);
+}
+
+// Toggle the Icon of the button
+function toggleIcon(button) {
+  const deactivateIcon = button.querySelector('img.deactivate');
+  const activateIcon = button.querySelector('img.activate');
+
+  if (deactivateIcon.style.display === 'none') {
+    deactivateIcon.style.display = 'block';
+    activateIcon.style.display = 'none';
+  } else {
+    deactivateIcon.style.display = 'none';
+    activateIcon.style.display = 'block';
+  }
+}
+
+function addFeebackBannerUnderEngagementPannel(infoBox) {
+  const middleRow = infoBox.querySelector('#middle-row');
+
+  const banner = document.createElement('div');
+  banner.className = 'feedback-banner';
+  //const thumbnailImgSrc = thumbnail.querySelector('img').src;
+  //const videoId = infobox.querySelector('a').href.split('=')[1];
+
+  banner.innerHTML = `
+      <div class="text-button-container">
+        <p>You will receive less similar content.</p>
+        <button class="cancel-action-button">Cancel</button>
+      </div>
+    `;
+
+  middleRow.appendChild(banner);
 }
 
 // Function to replace a thumbnail element with a feedback banner
