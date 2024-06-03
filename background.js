@@ -34,7 +34,7 @@ async function sendYTSignal(videoId, action, type, headers) {
     } else if (type === 'recommendation') {
       await sendNotInterestedSignal(videoId, headers);
       await sendDontRecommendChannelSignal(videoId, headers);
-      await sendDislikeSignal(videoId, headers);
+      //await sendDislikeSignal(videoId, headers);
     }
   } else if (action === 'cancelAction') {
     if (type === 'video') {
@@ -45,7 +45,7 @@ async function sendYTSignal(videoId, action, type, headers) {
     } else if (type === 'recommendation') {
       await cancelNotInterestedSignal(videoId, headers);
       await cancelDontRecommendChannelSignal(videoId, headers);
-      await cancelDislikeSignal(videoId, headers);
+      //await cancelDislikeSignal(videoId, headers);
     }
   }
 }

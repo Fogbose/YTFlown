@@ -164,7 +164,7 @@ function onPageChange(mutationList, observer) {
         mutation.target.closest('ytd-compact-video-renderer')
       ) {
         addButtonToThumbnail(
-          mutation.target.closest('ytd-compact-video-renderer')
+          mutation.target.closest('ytd-compact-video-renderer > #dismissible')
         );
       }
     }
