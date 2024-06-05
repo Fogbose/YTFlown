@@ -1,87 +1,127 @@
+/* Variables for reusability */
+
+:root {
+  --primary-background-color: #ffffff;
+  --secondary-background-color: #f2f2f2;
+  --emphase-color: #065fd4;
+  --hover-background-color: rgba(0, 0, 0, 0.1);
+  --hover-emphase-color: rgba(6, 95, 212, 0.1);
+  --border-style: 2px solid #e5e5e5;
+  --border-radius: 18px;
+  --font-family: 'Roboto', sans-serif;
+  --h1-font-weight: 500;
+  --h2-font-weight: 400;
+  --h1-font-size: 14px;
+  --h2-font-size: 12px;
+  --padding: 8px;
+  --inside-box-horizontal-margin: 0px 3px;
+  --outside-box-horizontal-margin: 0px 8px;
+  --outside-box-vertical-margin: 8px 0px;
+  --engagement-button-max-height: 36px;
+  --feedback-banner-max-height: 104px;
+  --feedback-banner-max-width: 100%;
+}
+
+/* 'Not Interested' button */
+
+/* Button styles */
+
 .not-interested-button {
-  background-color: #f2f2f2;
+  background-color: var(--secondary-background-color);
   border: none;
-  align-items: center;
-}
-
-.thumbnail {
-  border-radius: 8px;
-}
-
-.engagement-pannel {
+  border-radius: var(--border-radius);
   display: flex;
-  flex-direction: row;
-  border-radius: 18px;
-  width: auto;
-  height: 36px;
-  margin-right: 10px;
-  padding-left: 10px;
-  padding-right: 16px;
-}
-
-.engagement-pannel img {
-  margin-right: 5px;
-}
-
-.not-interested-button p {
-  font-family: 'Roboto', sans-serif;
-  font-weight: 500;
-  font-size: 14px;
+  align-items: center;
+  cursor: pointer;
 }
 
 .not-interested-button:hover {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: var(--hover-background-color);
 }
 
 .not-interested-button img {
-  stroke-width: '2px';
+  margin: var(--inside-box-horizontal-margin);
 }
+
+.not-interested-text {
+  font-family: var(--font-family);
+  font-weight: var(--h1-font-weight);
+  font-size: var(--h1-font-size);
+  margin: var(--inside-box-horizontal-margin);
+}
+
+/* Container styles */
+
+.engagement-pannel {
+  margin: var(--outside-box-horizontal-margin);
+  max-height: var(--engagement-button-max-height);
+}
+
+.not-interested-container {
+  display: flex;
+  flex-direction: row;
+}
+
+/* Feedback Banner */
+
+/* Feedback Banner styles */
 
 .feedback-banner {
-  background-color: #ffffff;
-  border: 2px solid #e5e5e5;
-  border-radius: 8px;
-  padding: 10px;
+  background-color: var(--primary-background-color);
+  border: var(--border-style);
+  border-radius: var(--border-radius);
+  margin: var(--outside-box-vertical-margin);
+  max-height: var(--feedback-banner-max-height);
+  max-width: var(--feedback-banner-max-width);
+  padding: var(--padding);
+}
+
+.banner-primary-container {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 10px 0;
-  width: 100%;
+  flex-direction: row;
 }
 
-.feedback-banner img {
-  max-width: 120px;
-  max-height: 67px;
-  border-radius: 8px;
+.banner-primary-container img {
+  border-radius: var(--border-radius);
+  margin: var(--inside-box-horizontal-margin);
 }
 
-.feedback-banner .text-button-container {
+.middle-row .banner-primary-container img {
+  max-width: 320px;
+  max-height: 180px;
+}
+
+.thumbnail-banner img {
+  max-width: 160px;
+  max-height: 90px;
+}
+
+.text-button-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  margin-right: 20px;
+  flex-grow: 1;
+  justify-content: space-evenly;
+  margin: var(--inside-box-horizontal-margin);
 }
 
-.feedback-banner p {
-  flex-grow: 1;
-  margin: 10px 0 10px 0;
-  font-family: 'Roboto', sans-serif;
-  font-weight: 400;
-  font-size: 12px;
+.text-button-container span {
+  font-family: var(--font-family);
+  font-weight: var(--h2-font-weight);
+  font-size: var(--h2-font-size);
 }
 
 .cancel-action-button {
-  background-color: #ffffff;
-  color: #065fd4;
+  background-color: var(--primary-background-color);
+  color: var(--emphase-color);
   border: none;
-  border-radius: 20px;
-  padding: 10px 15px;
+  border-radius: var(--border-radius);
+  padding: var(--padding);
+  font-family: var(--font-family);
+  font-weight: var(--h1-font-weight);
+  font-size: var(--h1-font-size);
   cursor: pointer;
-  font-family: 'Roboto', sans-serif;
-  font-weight: 500;
-  font-size: 14px;
 }
 
 .cancel-action-button:hover {
-  background-color: #def1ff;
+  background-color: var(--hover-emphase-color);
 }

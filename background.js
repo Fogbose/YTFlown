@@ -76,7 +76,7 @@ async function handleNotInterestedAction(videoId, type, headers) {
   const promises = [
     sendNotInterestedSignal(videoId, headers),
     sendDontRecommendChannelSignal(videoId, headers),
-    //sendDislikeSignal(videoId, headers)
+    //sendDislikeSignal(videoId, headers),
   ];
 
   if (type === 'video') {
@@ -91,6 +91,7 @@ async function handleCancelAction(videoId, type, headers) {
   const promises = [
     cancelNotInterestedSignal(videoId, headers),
     cancelDontRecommendChannelSignal(videoId, headers),
+    //cancelDislikeSignal(videoId, headers),
   ];
 
   if (type === 'video') {
@@ -150,7 +151,7 @@ async function cancelRemoveFromHistorySignal(videoId, headers) {
   return Promise.resolve({ message: "'Remove From History' signal cancelled" });
 }
 
-// Function to get a video thumbnail
+// /!\ DEPRECATED - Due to low access to API /!\ Function to get a video thumbnail
 async function getVideoThumbnail(videoId, headers) {
   const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}`;
   try {

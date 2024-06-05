@@ -38,31 +38,32 @@ function getThumbnailImgSrc(videoId) {
 //**************************************************************************** */
 
 // Function to create and return a 'Not Interested' button
-function createNotInterestedButton(className, clickHandler) {
+function createNotInterestedButton(className, clickHandler, isActivated) {
   const button = document.createElement('button');
   button.className = `not-interested-button ${className}`;
+  button.style.display = isActivated ? 'none' : 'flex';
+  button.setAttribute('arial-label', 'Not Interested');
 
-  const deactivateIcon = document.createElement('img');
-  deactivateIcon.className = 'deactivate';
-  deactivateIcon.src = chrome.runtime.getURL('assets/images/dash-circle.svg');
-  deactivateIcon.alt = 'Not Interested';
-  deactivateIcon.style.display = 'block';
+  const buttonContainer = document.createElement('div');
+  buttonContainer.className = 'not-interested-container';
 
-  const activateIcon = document.createElement('img');
-  activateIcon.className = 'activate';
-  activateIcon.src = chrome.runtime.getURL(
-    'assets/images/dash-circle-fill.svg'
-  );
-  activateIcon.alt = 'Not Interested';
-  activateIcon.style.display = 'none';
+  const icon = document.createElement('img');
+  const src = isActivated
+    ? 'assets/images/dash-circle-fill.svg'
+    : 'assets/images/dash-circle.svg';
+  icon.className = isActivated ? 'activate' : 'deactivate';
+  icon.src = chrome.runtime.getURL(src);
+  icon.alt = 'Not Interested';
 
-  const textParagraph = document.createElement('p');
+  const textParagraph = document.createElement('span');
   textParagraph.textContent = 'Not Interested';
-  textParagraph.style.display = 'block';
+  textParagraph.className = 'not-interested-text';
 
-  button.appendChild(deactivateIcon);
-  button.appendChild(activateIcon);
-  button.appendChild(textParagraph);
+  buttonContainer.appendChild(icon);
+  buttonContainer.appendChild(textParagraph);
+
+  button.appendChild(buttonContainer);
+
   button.addEventListener('click', clickHandler);
 
   return button;
@@ -79,6 +80,7 @@ function createMessageToBackground(action, type, videoId, feedback) {
       },
       (response) => {
         if (response.action === 'actionComleted') {
+          console.log(response.result);
           resolve(feedback ? feedback() : response.result);
         } else if (response.action === 'actionFailed') {
           reject(response.error || 'Failed: Error in feedback process');
@@ -93,6 +95,10 @@ function createFeedbackBanner(className, thumbnailImgSrc, clickHandler) {
   const banner = document.createElement('div');
   banner.className = `feedback-banner ${className}`;
   banner.style.display = 'none';
+  banner.setAttribute('role', 'alert');
+
+  const bannerPrimaryContainer = document.createElement('div');
+  bannerPrimaryContainer.className = 'banner-primary-container';
 
   const img = document.createElement('img');
   img.src = thumbnailImgSrc;
@@ -101,19 +107,22 @@ function createFeedbackBanner(className, thumbnailImgSrc, clickHandler) {
   const textButton = document.createElement('div');
   textButton.className = 'text-button-container';
 
-  const text = document.createElement('p');
+  const text = document.createElement('span');
   text.textContent = 'You will receive less similar content.';
 
-  const button = document.createElement('Button');
+  const button = document.createElement('button');
   button.className = 'cancel-action-button';
   button.textContent = 'Cancel';
   button.addEventListener('click', clickHandler);
+  button.setAttribute('aria-label', 'Cancel action');
 
   textButton.appendChild(text);
   textButton.appendChild(button);
 
-  banner.appendChild(img);
-  banner.appendChild(textButton);
+  bannerPrimaryContainer.appendChild(img);
+  bannerPrimaryContainer.appendChild(textButton);
+
+  banner.appendChild(bannerPrimaryContainer);
 
   return banner;
 }
@@ -126,13 +135,28 @@ function addButtonToEngagementPannel() {
 
   if (engagementPannel.querySelector('.not-interested-button')) return;
 
-  const button = createNotInterestedButton('engagement-pannel', () =>
-    createMessageToBackground(
-      'notInterested',
-      'video',
-      getCurrentVideoId(),
-      toggleEngagementPannelBanner()
-    )
+  const deactivatedButton = createNotInterestedButton(
+    'engagement-pannel',
+    () =>
+      createMessageToBackground(
+        'notInterested',
+        'video',
+        getCurrentVideoId(),
+        toggleEngagementPannel()
+      ),
+    false
+  );
+
+  const activatedButton = createNotInterestedButton(
+    'engagement-pannel',
+    () =>
+      createMessageToBackground(
+        'cancelAction',
+        'video',
+        getCurrentVideoId(),
+        toggleEngagementPannel()
+      ),
+    true
   );
 
   // Update the number of childs specified as attribute in parent node
@@ -140,9 +164,10 @@ function addButtonToEngagementPannel() {
     engagementPannel.getAttribute('has-items'),
     10
   );
-  engagementPannel.setAttribute('has-items', currentNumItems + 1);
+  engagementPannel.setAttribute('has-items', currentNumItems + 2);
 
-  engagementPannel.prepend(button);
+  engagementPannel.prepend(activatedButton);
+  engagementPannel.prepend(deactivatedButton);
 }
 
 // Function to add 'Not Interested' button to thumbnails
@@ -154,11 +179,13 @@ function addButtonToThumbnail(thumbnail) {
       'notInterested',
       'recommendation',
       getThumbnailVideoId(thumbnail),
-      toggleThumbnailWithBanner(thumbnail)
+      toggleThumbnailWithBanner(thumbnail),
+      'flex',
+      false
     )
   );
 
-  button.querySelector('p').style.display = 'none';
+  button.querySelector('span').style.display = 'none';
 
   thumbnail.appendChild(button);
 }
@@ -200,13 +227,33 @@ function addFeedbackBannerToThumbnail(thumbnail) {
 
 //**************************************************************************** */
 
+// Toggle the Engagement Pannel with information banner
+function toggleEngagementPannel() {
+  toggleEngagementPannelButton();
+  toggleEngagementPannelBanner();
+}
+
+// Toggle the Engagement Pannel 'Not Interested' Button
+function toggleEngagementPannelButton() {
+  const buttons = getEngagementPanel().querySelectorAll(
+    '.not-interested-button'
+  );
+
+  buttons.forEach((button) => {
+    button.style.display = button.style.display === 'none' ? 'flex' : 'none';
+  });
+}
+
 // Toggle the Engagement Pannel Banner
 function toggleEngagementPannelBanner() {
   const banner = getMiddleRow().querySelector('.feedback-banner');
-  const button = getEngagementPanel().querySelector('button');
+  const deactivateButton = getEngagementPanel()
+    .querySelector('.deactivate')
+    .closest('button');
 
-  toggleIcon(button);
-  banner.style.display = banner.style.display === 'none' ? 'block' : 'none';
+  const isActivated = deactivateButton.style.display === 'none';
+
+  banner.style.display = isActivated ? 'flex' : 'none';
 }
 
 // Toggle the Icon of the button
@@ -215,12 +262,14 @@ function toggleIcon(button) {
   const activateIcon = button.querySelector('img.activate');
 
   if (deactivateIcon.style.display === 'none') {
-    deactivateIcon.style.display = 'block';
+    deactivateIcon.style.display = 'flex';
     activateIcon.style.display = 'none';
   } else {
     deactivateIcon.style.display = 'none';
-    activateIcon.style.display = 'block';
+    activateIcon.style.display = 'flex';
   }
+
+  return deactivateIcon.style.display === 'none';
 }
 
 // Toggle between thumbnail and feedback banner
@@ -231,7 +280,7 @@ function toggleThumbnailWithBanner(thumbnail) {
 
   if (banner.style.display === 'none') {
     thumbnail.style.display = 'none';
-    banner.style.display = 'block';
+    banner.style.display = 'flex';
   } else {
     thumbnail.removeAttribute('style');
     banner.style.display = 'none';
@@ -254,8 +303,8 @@ function onPageChange(mutationList, observer) {
         ) {
           // Creation of 'Not interested' button to engagement pannel
           // while available.
-          addButtonToEngagementPannel();
           addFeebackBannerUnderEngagementPannel();
+          addButtonToEngagementPannel();
         }
       });
 
@@ -286,7 +335,6 @@ function onPageChange(mutationList, observer) {
     }
   }
 }
-toggleThumbnailWithBanner;
 
 // Mutation Observer configuration to interact with YouTube SPA
 // in order to react to dynamic DOM events
