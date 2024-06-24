@@ -1,158 +1,263 @@
-// Listen content script messages
+// Liste for web navigation events on YouTube
+chrome.webNavigation.onHistoryStateUpdated.addListener(
+  function (details) {
+    chrome.scripting.executeScript({
+      target: { tabId: details.tabId },
+      files: ['/scripts/audit.js'],
+    });
+  },
+  { url: [{ hostSuffix: 'youtube.com', pathPrefix: '/watch' }] }
+);
+
+// Listen for messages from content and audit scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  chrome.identity.getAuthToken({ interactive: true }, async (token) => {
-    if (chrome.runtime.lastError) {
-      console.error('Error getting auth token:', chrome.runtime.lastError);
-      sendResponse({
-        action: 'actionFailed',
-        error: chrome.runtime.lastError.message,
-      });
-      return;
-    }
-
-    const headers = new Headers();
-    headers.append('Authorization', `Bearer ${token}`);
-    headers.append('Content-type', 'application/json');
-
-    try {
-      const result = await sendYTSignal(
-        request.videoId,
-        request.action,
-        request.type,
-        headers
-      );
-      sendResponse({ action: 'actionCompleted', result });
-    } catch (error) {
-      console.error('Error sending signals:', error);
-      sendResponse({
-        action: 'actionFailed',
-        error: error.message,
-      });
-    }
-  });
-
+  if (request.source == 'content') {
+    handleContentMessage(request, sender, sendResponse);
+  } else if (request.source == 'audit') {
+    handleAuditMessage(request, sender, sendResponse);
+  }
   return true;
 });
 
-// Function to send an request to YouTube Data API v3
-async function sendYTRequest(url, headers) {
+// Manage content script message
+async function handleContentMessage(request, sender, sendResponse) {
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-    });
+    const token = await fetchAuthToken();
+    const headers = createAuthHeaders(token);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    return response;
+    const result = await processYTAction(
+      request.videoId,
+      request.action,
+      request.type,
+      headers
+    );
+    sendResponse({ action: 'actionCompleted', result });
   } catch (error) {
-    console.log('Error in sendYTRequest:', error);
-    throw error;
+    console.error('Error in manageContentMessage:', error);
+    sendResponse({
+      action: 'actionFailed',
+      error: error.message,
+    });
   }
 }
 
-// Send a signal to YouTube Data API v3 according to action and type request
-async function sendYTSignal(videoId, action, type, headers) {
+// Manage audit script message
+async function handleAuditMessage(request, sender, sendResponse) {
   try {
-    if (action === 'notInterested') {
-      return await handleNotInterestedAction(videoId, type, headers);
-    } else if (action === 'cancelAction') {
-      return await handleCancelAction(videoId, type, headers);
-    } else if (action === 'retrieveThumbnail') {
-      if (type === 'video') {
-        return await getVideoThumbnail(videoId, headers);
-      }
+    const token = await fetchAuthToken();
+    const headers = createAuthHeaders(token);
+
+    if (request.action === 'recommendations') {
+      const vanillaRecommendationsIds =
+        await fetchRecommendationsRelatedToVideoId(request.videoId, headers);
+
+      const vanillaCategoryPromises = vanillaRecommendationsIds.map(
+        async (vanillaVideoId) => {
+          const vanillaCategoryId = await fetchVideoCategories(
+            vanillaVideoId,
+            headers
+          );
+          return { vanillaVideoId, vanillaCategoryId };
+        }
+      );
+
+      const categoryPromises = request.videoIds.map(async (videoId) => {
+        const categoryId = await fetchVideoCategories(videoId, headers);
+        return { videoId, categoryId };
+      });
+
+      const vanillaVideoCategories = await Promise.all(vanillaCategoryPromises);
+      const videoCategories = await Promise.all(categoryPromises);
+
+      const relatedToVideoCategories =
+        await fetchRecommendationsRelatedToVideoId(request.videoId, headers);
+
+      await storeRecommendations(relatedToVideoCategories, videoCategories);
+      sendResponse({ action: 'actionCompleted' });
     }
   } catch (error) {
-    console.error('Error in SendYTSignal:', error);
-    throw error;
+    console.error('Error in manageAuditMessage:', error);
+    sendResponse({
+      action: 'actionFailed',
+      error: error.message,
+    });
+  }
+}
+
+// Get authentication token
+function fetchAuthToken() {
+  return new Promise((resolve, reject) => {
+    chrome.identity.getAuthToken({ interactive: true }, (token) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve(token);
+      }
+    });
+  });
+}
+
+// Create headers with auth token
+function createAuthHeaders(token) {
+  const headers = new Headers();
+  headers.append('Authorization', `Bearer ${token}`);
+  headers.append('Content-type', 'application/json');
+  return headers;
+}
+
+// Fetch the video categories by its ID
+async function fetchVideoCategories(videoId, headers) {
+  const result = await sendYTRequest(
+    `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}`,
+    'GET',
+    headers
+  );
+  const data = await result.json();
+  return data.items[0].snippet.categoryId;
+}
+
+async function fetchRecommendationsRelatedToVideoId(videoId, headers) {
+  const result = await sendYTRequest(
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&relatedToVideoId=${videoId}&type=video`,
+    'GET',
+    headers
+  );
+  const data = await result.json();
+  const videoIds = Object.values(data).map((item) => item.id.videoId);
+  return Array.from(videoIds);
+}
+
+// Store recommendations to local storage
+async function storeRecommendations(
+  randomRecommendations,
+  customRecommendations
+) {
+  chrome.storage.local.get(['RandomRecommendations']).then((result) => {
+    let data = result.recommendations || [];
+    data.push(randomRecommendations);
+    chrome.storage.local.set({ RandomRecommendations: data }).then(() => {
+      console.log('Random recommendations saved', data);
+    });
+  });
+
+  chrome.storage.local.get(['CustomRecommendations']).then((result) => {
+    let data = result.recommendations || [];
+    data.push(customRecommendations);
+    chrome.storage.local.set({ CustomRecommendations: data }).then(() => {
+      console.log('Custom recommendations saved', data);
+    });
+  });
+
+  return true;
+}
+
+// Send a request to YouTube Data API v3
+async function sendYTRequest(url, method, headers) {
+  const response = await fetch(url, { method, headers });
+  if (!response.ok) {
+    throw new Error(`HTTP error! Status: ${response.status}`);
+  }
+  return response;
+}
+
+// Process a YouTube Action
+async function processYTAction(videoId, action, type, headers) {
+  switch (action) {
+    case 'notInterested':
+      return handleNotInterested(videoId, type, headers);
+    case 'cancelAction':
+      return handleCancel(videoId, type, headers);
+    case 'retrieveThumbnail':
+      if (type === 'video') {
+        return fetchVideoThumbnail(videoId, headers);
+      }
   }
 }
 
 // Manage 'Not Interessed' actions
-async function handleNotInterestedAction(videoId, type, headers) {
+async function handleNotInterested(videoId, type, headers) {
   const promises = [
-    sendNotInterestedSignal(videoId, headers),
-    sendDontRecommendChannelSignal(videoId, headers),
-    //sendDislikeSignal(videoId, headers),
+    sendNotInterested(videoId, headers),
+    sendDontRecommendChannel(videoId, headers),
+    //sendDislike(videoId, headers),
   ];
 
   if (type === 'video') {
-    promises.push(sendRemoveFromHistorySignal(videoId, headers));
+    promises.push(sendRemoveFromHistory(videoId, headers));
   }
 
   return await Promise.all(promises);
 }
 
 // Manage 'Cancel' actions
-async function handleCancelAction(videoId, type, headers) {
+async function handleCancel(videoId, type, headers) {
   const promises = [
-    cancelNotInterestedSignal(videoId, headers),
-    cancelDontRecommendChannelSignal(videoId, headers),
-    //cancelDislikeSignal(videoId, headers),
+    cancelNotInterested(videoId, headers),
+    cancelDontRecommendChannel(videoId, headers),
+    //cancelDislike(videoId, headers),
   ];
 
   if (type === 'video') {
-    promises.push(cancelRemoveFromHistorySignal(videoId, headers));
+    promises.push(cancelRemoveFromHistory(videoId, headers));
   }
 
   return await Promise.all(promises);
 }
 
 // Function to send a 'Not Interested' signal
-async function sendNotInterestedSignal(videoId, headers) {
+async function sendNotInterested(videoId, headers) {
   return Promise.resolve({ message: "'Not Interested' signal sent" });
 }
 
 // Function to cancel a 'Not Interested' signal
-async function cancelNotInterestedSignal(videoId, headers) {
+async function cancelNotInterested(videoId, headers) {
   return Promise.resolve({ message: "'Not Interested' signal cancelled" });
 }
 
 // Function to send a 'Dont Recommend Channel' signal
-async function sendDontRecommendChannelSignal(videoId, headers) {
+async function sendDontRecommendChannel(videoId, headers) {
   return Promise.resolve({ message: "'Don't Recommend Channel' signal sent" });
 }
 
 // Function to cancel a 'Dont recommend Channel' signal
-async function cancelDontRecommendChannelSignal(videoId, headers) {
+async function cancelDontRecommendChannel(videoId, headers) {
   return Promise.resolve({
     message: "'Don't Recommend Channel' signal cancelled",
   });
 }
 
 // Function to send a 'Dislike' signal
-async function sendDislikeSignal(videoId, headers) {
+async function sendDislike(videoId, headers) {
   const result = await sendYTRequest(
     `https://www.googleapis.com/youtube/v3/videos/rate?id=${videoId}&rating=dislike`,
+    'POST',
     headers
   );
   return result;
 }
 
 // Function to cancel a 'Dislike' signal
-async function cancelDislikeSignal(videoId, headers) {
+async function cancelDislike(videoId, headers) {
   const result = await sendYTRequest(
     `https://www.googleapis.com/youtube/v3/videos/rate?id=${videoId}&rating=none`,
+    'POST',
     headers
   );
   return result;
 }
 
 // Function to send a 'Remove From History' signal
-async function sendRemoveFromHistorySignal(videoId, headers) {
+async function sendRemoveFromHistory(videoId, headers) {
   return Promise.resolve({ message: "'Remove From History' signal sent" });
 }
 
 // Function to cancel a 'Remove From History' signal
-async function cancelRemoveFromHistorySignal(videoId, headers) {
+async function cancelRemoveFromHistory(videoId, headers) {
   return Promise.resolve({ message: "'Remove From History' signal cancelled" });
 }
 
 // /!\ DEPRECATED - Due to low access to API /!\ Function to get a video thumbnail
-async function getVideoThumbnail(videoId, headers) {
+async function fetchVideoThumbnail(videoId, headers) {
   const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}`;
   try {
     const response = await fetch(apiUrl, headers);

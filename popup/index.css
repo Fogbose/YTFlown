@@ -1,0 +1,79 @@
+/* Reset default margin and padding */
+body,
+html {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+}
+
+/* Global styling */
+body {
+  font-family: 'Roboto', Arial, sans-serif; /* Utilisation de Roboto, la police de Google */
+  background-color: #f0f0f0;
+  padding: 20px;
+}
+
+/* Title section styling */
+.title-section {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+#mainTitle {
+  font-size: 2.5em;
+  font-weight: bold;
+  color: #1a73e8; /* Bleu utilisé par Google */
+}
+
+#description {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.8em; /* Taille de police légèrement augmentée */
+  color: #70757a; /* Couleur grise utilisée par Google */
+}
+
+/* Separator line */
+.separator {
+  margin: 20px auto;
+  width: 50%;
+  border: none;
+  border-top: 1px solid #dadce0; /* Gris plus clair utilisé par Google */
+}
+
+/* Button section styling */
+.button-section {
+  display: flex;
+  justify-content: center;
+}
+
+.button-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin: 0 10px;
+  flex: 1;
+}
+
+.button-container span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+  color: #70757a; /* Couleur grise utilisée par Google */
+  text-align: center;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 1em;
+  background-color: #1a73e8; /* Bleu utilisé par Google */
+  color: white;
+  border: none;
+  border-radius: 24px; /* Légère augmentation du rayon de la bordure */
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #0d60d6; /* Teinte légèrement plus sombre du bleu au survol */
+}

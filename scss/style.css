@@ -125,3 +125,12 @@
 .cancel-action-button:hover {
   background-color: var(--hover-emphase-color);
 }
+
+popup-container {
+  width: 300px; /* Largeur de la popup */
+  height: 200px; /* Hauteur de la popup */
+  position: fixed; /* Positionner la popup à l'écran */
+  top: 50%; /* Positionner la popup au centre de l'écran */
+  left: 50%; /* Positionner la popup au centre de l'écran */
+  transform: translate(-50%, -50%); /* Décalage pour centrer la popup */
+}

@@ -1,22 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title>YouTube Video ID Extractor</title>
-    <style>
-      body {
-        width: 300px;
-        font-family: Arial, sans-serif;
-      }
-      #video-ids {
-        white-space: pre-wrap;
-        word-wrap: break-word;
-      }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YTFlown Extension</title>
+    <link rel="stylesheet" href="index.css" />
   </head>
   <body>
-    <h1>YouTube Video ID Extractor</h1>
-    <button id="extract">Extract Video IDs</button>
-    <div id="video-ids"></div>
+    <div class="title-section">
+      <span id="mainTitle">YTFlown</h2>
+      <p id="description">
+        Plugin that provide immadiate mechanisms to correct and enhance
+        recommendations.
+      </p>
+    </div>
+
+    <hr class="separator">
+
+    <div class="button-section">
+      <div class="button-container">
+        <span> Export the list of recommendations made to user during the user test.</span>
+        <button id="exportData">
+          Export Data
+        </button>
+      </div>
+      <div class="button-container">
+        <span style="margin-top: 6px;"> Reset the extension data storage. </span>
+        <button id="resetStorage" style="margin-top: 6px;">
+          Reset Storage
+        </button>
+      </div>
+    </div>
+
     <script src="index.js"></script>
   </body>
 </html>

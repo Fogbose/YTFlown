@@ -74,6 +74,7 @@ function createMessageToBackground(action, type, videoId, feedback) {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
       {
+        source: 'content',
         action: action,
         type: type,
         videoId,
@@ -292,8 +293,8 @@ function toggleThumbnailWithBanner(thumbnail) {
 // Callback function for MutationObserver
 function onPageChange(mutationList, observer) {
   for (let mutation of mutationList) {
+    // Reaction to node creation
     if (mutation.type === 'childList' || mutation.type === 'subtree') {
-      // Reaction to node creation
       mutation.addedNodes.forEach((addedNode) => {
         if (
           addedNode.nodeType === Node.ELEMENT_NODE &&
@@ -305,17 +306,6 @@ function onPageChange(mutationList, observer) {
           // while available.
           addFeebackBannerUnderEngagementPannel();
           addButtonToEngagementPannel();
-        }
-      });
-
-      // Reaction to node deletation
-      mutation.removedNodes.forEach((removedNode) => {
-        if (
-          removedNode.nodeType === Node.ELEMENT_NODE &&
-          removedNode.matches('#menu > ytd-menu-renderer') &&
-          addedNode.closest('#below > ytd-watch-metadata')
-        ) {
-          console.log('ah oui ?');
         }
       });
     }
@@ -339,13 +329,13 @@ function onPageChange(mutationList, observer) {
 // Mutation Observer configuration to interact with YouTube SPA
 // in order to react to dynamic DOM events
 // due to YouTube SPA model.
+const targetNode = document.getElementById('page-manager');
 const observerConfig = {
   childList: true,
   subtree: true,
   attributes: true,
   attributesFilter: ['href'],
 };
-const targetNode = document.getElementById('page-manager');
 const observer = new MutationObserver(onPageChange);
 observer.observe(targetNode, observerConfig);
 
