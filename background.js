@@ -49,9 +49,9 @@ async function handleAuditMessage(request, sender, sendResponse) {
 
     if (request.action === 'recommendations') {
       const vanillaRecommendationsIds =
-        await fetchRecommendationsRelatedToVideoId(request.videoId, headers);
+        await fetchRecommendationsRelatedToVideoId(request.currentVideoId);
 
-      const vanillaCategoryPromises = vanillaRecommendationsIds.map(
+      const vanillaCategoryPromises = vanillaRecommendationsIds[0].result.map(
         async (vanillaVideoId) => {
           const vanillaCategoryId = await fetchVideoCategories(
             vanillaVideoId,
@@ -69,10 +69,7 @@ async function handleAuditMessage(request, sender, sendResponse) {
       const vanillaVideoCategories = await Promise.all(vanillaCategoryPromises);
       const videoCategories = await Promise.all(categoryPromises);
 
-      const relatedToVideoCategories =
-        await fetchRecommendationsRelatedToVideoId(request.videoId, headers);
-
-      await storeRecommendations(relatedToVideoCategories, videoCategories);
+      await storeRecommendations(vanillaVideoCategories, videoCategories);
       sendResponse({ action: 'actionCompleted' });
     }
   } catch (error) {
@@ -116,26 +113,62 @@ async function fetchVideoCategories(videoId, headers) {
   return data.items[0].snippet.categoryId;
 }
 
-async function fetchRecommendationsRelatedToVideoId(videoId, headers) {
-  const result = await sendYTRequest(
-    `https://www.googleapis.com/youtube/v3/search?part=snippet&relatedToVideoId=${videoId}&type=video`,
-    'GET',
-    headers
+async function fetchRecommendationsRelatedToVideoId(videoId) {
+  return new Promise((resolve, reject) => {
+    chrome.windows.create(
+      {
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        incognito: true,
+        focused: false,
+        type: 'popup',
+        state: 'minimized',
+      },
+      (window) => {
+        setTimeout(() => {
+          const tabId = window.tabs[0].id;
+          chrome.scripting.executeScript(
+            {
+              target: { tabId: tabId },
+              func: extractRecommendations,
+            },
+            (results) => {
+              if (chrome.runtime.lastError) {
+                chrome.windows.remove(window.id);
+                return reject(chrome.runtime.lastError);
+              }
+              chrome.windows.remove(window.id);
+              resolve(results);
+            }
+          );
+        }, 5000);
+      }
+    );
+  });
+}
+
+function extractRecommendations() {
+  const recommendationElements = Array.from(
+    document.querySelectorAll(
+      '#items > ytd-compact-video-renderer > #dismissible'
+    )
   );
-  const data = await result.json();
-  const videoIds = Object.values(data).map((item) => item.id.videoId);
-  return Array.from(videoIds);
+
+  const recommendedURL = recommendationElements.map((element) =>
+    new URL(element.querySelector('a').href).searchParams.get('v')
+  );
+
+  return recommendedURL;
 }
 
 // Store recommendations to local storage
 async function storeRecommendations(
-  randomRecommendations,
+  generalRecommendations,
   customRecommendations
 ) {
-  chrome.storage.local.get(['RandomRecommendations']).then((result) => {
+  chrome.storage.local.get(['GeneralRecommendations']).then((result) => {
     let data = result.recommendations || [];
-    data.push(randomRecommendations);
-    chrome.storage.local.set({ RandomRecommendations: data }).then(() => {
+    data.push(generalRecommendations);
+    chrome.storage.local.set({ GeneralRecommendations: data }).then(() => {
       console.log('Random recommendations saved', data);
     });
   });

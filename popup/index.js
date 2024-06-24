@@ -3,26 +3,27 @@ document.addEventListener('DOMContentLoaded', function () {
   var resetStorageButton = document.getElementById('resetStorage');
 
   exportDataButton.addEventListener('click', function () {
-    chrome.storage.local.get(['recommendations']).then((data) => {
-      console.log(data);
-      var jsonData = JSON.stringify(data);
-      var blob = new Blob([jsonData], { type: 'application/json' });
-      var url = URL.createObjectURL(blob);
+    chrome.storage.local
+      .get(['GeneralRecommendations', 'CustomRecommendations'])
+      .then((data) => {
+        var jsonData = JSON.stringify(data);
+        var blob = new Blob([jsonData], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
 
-      // Create a link to download file
-      var a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = 'extension_data.json';
-      document.body.appendChild(a);
+        // Create a link to download file
+        var a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'extension_data.json';
+        document.body.appendChild(a);
 
-      // Download the file;
-      a.click();
+        // Download the file;
+        a.click();
 
-      // Clear link
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    });
+        // Clear link
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
   });
 
   resetStorageButton.addEventListener('click', function () {
