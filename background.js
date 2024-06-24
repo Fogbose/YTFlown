@@ -51,13 +51,10 @@ async function handleAuditMessage(request, sender, sendResponse) {
       const vanillaRecommendationsIds =
         await fetchRecommendationsRelatedToVideoId(request.currentVideoId);
 
-      const vanillaCategoryPromises = vanillaRecommendationsIds[0].result.map(
-        async (vanillaVideoId) => {
-          const vanillaCategoryId = await fetchVideoCategories(
-            vanillaVideoId,
-            headers
-          );
-          return { vanillaVideoId, vanillaCategoryId };
+      const vanillaCategoryPromises = vanillaRecommendationsIds.map(
+        async (videoId) => {
+          const categoryId = await fetchVideoCategories(videoId, headers);
+          return { videoId, categoryId };
         }
       );
 
@@ -120,27 +117,37 @@ async function fetchRecommendationsRelatedToVideoId(videoId) {
         url: `https://www.youtube.com/watch?v=${videoId}`,
         incognito: true,
         focused: false,
-        type: 'popup',
-        state: 'minimized',
+        type: 'panel',
+        left: -1000,
+        top: -1000,
+        width: 1,
+        height: 1,
       },
       (window) => {
-        setTimeout(() => {
-          const tabId = window.tabs[0].id;
+        const checkRecommendations = setInterval(() => {
           chrome.scripting.executeScript(
             {
-              target: { tabId: tabId },
+              target: { tabId: window.tabs[0].id },
               func: extractRecommendations,
             },
             (results) => {
               if (chrome.runtime.lastError) {
+                clearInterval(checkRecommendations);
                 chrome.windows.remove(window.id);
-                return reject(chrome.runtime.lastError);
+                reject(chrome.runtime.lastError);
+                return;
               }
-              chrome.windows.remove(window.id);
-              resolve(results);
+
+              const recommendedURLs = results[0].result;
+
+              if (recommendedURLs.length >= 20) {
+                clearInterval(checkRecommendations);
+                chrome.windows.remove(window.id);
+                resolve(recommendedURLs.slice(0, 20));
+              }
             }
           );
-        }, 5000);
+        }, 1000);
       }
     );
   });
@@ -166,18 +173,20 @@ async function storeRecommendations(
   customRecommendations
 ) {
   chrome.storage.local.get(['GeneralRecommendations']).then((result) => {
-    let data = result.recommendations || [];
-    data.push(generalRecommendations);
-    chrome.storage.local.set({ GeneralRecommendations: data }).then(() => {
-      console.log('Random recommendations saved', data);
-    });
+    let generalData = result.GeneralRecommendations || [];
+    generalData.push(generalRecommendations);
+    chrome.storage.local
+      .set({ GeneralRecommendations: generalData })
+      .then(() => {
+        console.log('Random recommendations saved', generalData);
+      });
   });
 
   chrome.storage.local.get(['CustomRecommendations']).then((result) => {
-    let data = result.recommendations || [];
-    data.push(customRecommendations);
-    chrome.storage.local.set({ CustomRecommendations: data }).then(() => {
-      console.log('Custom recommendations saved', data);
+    let customData = result.CustomRecommendations || [];
+    customData.push(customRecommendations);
+    chrome.storage.local.set({ CustomRecommendations: customData }).then(() => {
+      console.log('Custom recommendations saved', customData);
     });
   });
 
