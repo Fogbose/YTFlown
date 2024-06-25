@@ -329,9 +329,7 @@ function onPageChange(mutationList, observer) {
 // Mutation Observer configuration to interact with YouTube SPA
 // in order to react to dynamic DOM events
 // due to YouTube SPA model.
-const targetNode =
-  document.getElementById('page-manager') ||
-  document.getElementsByTagName('body');
+const targetNode = document.getElementById('page-manager');
 const observerConfig = {
   childList: true,
   subtree: true,

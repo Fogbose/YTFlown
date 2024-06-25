@@ -99,14 +99,19 @@ function createAuthHeaders(token) {
   return headers;
 }
 
-// Fetch the video categories by its ID
-async function fetchVideoCategories(videoId, headers) {
+// Fetch the video data by its ID
+async function fetchVideoData(videoId, headers) {
   const result = await sendYTRequest(
     `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}`,
     'GET',
     headers
   );
-  const data = await result.json();
+  return await result.json();
+}
+
+// Fetch the video categories by its ID
+async function fetchVideoCategories(videoId, headers) {
+  const data = await fetchVideoData(videoId, headers);
   return data.items[0].snippet.categoryId;
 }
 
