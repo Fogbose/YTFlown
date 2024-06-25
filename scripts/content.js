@@ -134,7 +134,10 @@ function createFeedbackBanner(className, thumbnailImgSrc, clickHandler) {
 function addButtonToEngagementPannel() {
   const engagementPannel = getEngagementPanel();
 
-  if (engagementPannel.querySelector('.not-interested-button')) return;
+  const existingButtons = engagementPannel.querySelectorAll(
+    '.not-interested-button'
+  );
+  existingButtons.forEach((button) => button.remove());
 
   const deactivatedButton = createNotInterestedButton(
     'engagement-pannel',
@@ -173,7 +176,11 @@ function addButtonToEngagementPannel() {
 
 // Function to add 'Not Interested' button to thumbnails
 function addButtonToThumbnail(thumbnail) {
-  if (thumbnail.querySelector('.not-interested-button')) return;
+  const existingButton = thumbnail.querySelector('.not-interested-button');
+  if (existingButton) existingButton.remove();
+
+  const menuButton = thumbnail.querySelector('#menu > ytd-menu-renderer');
+  if (menuButton) menuButton.remove();
 
   const button = createNotInterestedButton('thumbnail', () =>
     createMessageToBackground(
@@ -195,7 +202,8 @@ function addButtonToThumbnail(thumbnail) {
 function addFeebackBannerUnderEngagementPannel() {
   const middleRow = getMiddleRow();
 
-  if (middleRow.querySelector('.feedback-banner')) return;
+  const existingBanner = middleRow.querySelector('.feedback-banner');
+  if (existingBanner) existingBanner.remove();
 
   const banner = createFeedbackBanner(
     'middle-row',
@@ -209,7 +217,8 @@ function addFeebackBannerUnderEngagementPannel() {
 
 // Function to add feedback banner to thumbnails
 function addFeedbackBannerToThumbnail(thumbnail) {
-  if (thumbnail.parentNode.querySelector('.feedback-banner')) return;
+  const existingBanner = thumbnail.parentNode.querySelector('.feedback-banner');
+  if (existingBanner) existingBanner.remove();
 
   const banner = createFeedbackBanner(
     'thumbnail-banner',
@@ -293,28 +302,23 @@ function toggleThumbnailWithBanner(thumbnail) {
 // Callback function for MutationObserver
 function onPageChange(mutationList, observer) {
   for (let mutation of mutationList) {
-    // Reaction to node creation
-    if (mutation.type === 'childList' || mutation.type === 'subtree') {
-      mutation.addedNodes.forEach((addedNode) => {
-        if (
-          addedNode.nodeType === Node.ELEMENT_NODE &&
-          addedNode.matches('#menu > ytd-menu-renderer') &&
-          addedNode.closest('#below > ytd-watch-metadata') &&
-          !addedNode.closest('#middle-row > ytd-info-panel-content-renderer')
-        ) {
-          // Creation of 'Not interested' button to engagement pannel
-          // while available.
-          addFeebackBannerUnderEngagementPannel();
-          addButtonToEngagementPannel();
-        }
-      });
-    }
     // Reaction to node modification
-    else if (mutation.type === 'attributes') {
+    if (mutation.type === 'attributes') {
+      if (
+        mutation.attributeName === 'href' &&
+        mutation.target.closest('#player') &&
+        getEngagementPanel() != null
+      ) {
+        addFeebackBannerUnderEngagementPannel();
+        addButtonToEngagementPannel();
+      }
       if (
         mutation.attributeName === 'href' &&
         mutation.target.closest('ytd-compact-video-renderer')
       ) {
+        mutation.target.closest(
+          'ytd-compact-video-renderer > #dismissible'
+        ).style.display = 'flex';
         addButtonToThumbnail(
           mutation.target.closest('ytd-compact-video-renderer > #dismissible')
         );
@@ -329,14 +333,19 @@ function onPageChange(mutationList, observer) {
 // Mutation Observer configuration to interact with YouTube SPA
 // in order to react to dynamic DOM events
 // due to YouTube SPA model.
-const targetNode = document.getElementById('page-manager');
-const observerConfig = {
-  childList: true,
-  subtree: true,
-  attributes: true,
-  attributesFilter: ['href'],
-};
-const observer = new MutationObserver(onPageChange);
-observer.observe(targetNode, observerConfig);
+document.addEventListener('yt-navigate-finish', process);
+
+function process() {
+  const targetNode = document.getElementById('page-manager');
+
+  const observerConfig = {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributesFilter: ['href'],
+  };
+  const observer = new MutationObserver(onPageChange);
+  observer.observe(targetNode, observerConfig);
+}
 
 //**************************************************************************** */

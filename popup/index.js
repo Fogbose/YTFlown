@@ -4,7 +4,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   exportDataButton.addEventListener('click', function () {
     chrome.storage.local
-      .get(['GeneralRecommendations', 'CustomRecommendations'])
+      .get([
+        'GeneralRecommendations',
+        'CustomRecommendations',
+        'NotInterestedVideos',
+      ])
       .then((data) => {
         var jsonData = JSON.stringify(data);
         var blob = new Blob([jsonData], { type: 'application/json' });

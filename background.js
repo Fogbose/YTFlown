@@ -172,6 +172,40 @@ function extractRecommendations() {
   return recommendedURL;
 }
 
+async function storeNotInterestedAction(videoId, headers) {
+  const categoryId = await fetchVideoCategories(videoId, headers);
+
+  chrome.storage.local.get(['NotInterestedVideos']).then((result) => {
+    let notInterestedVideos = result.NotInterestedVideos || [];
+    notInterestedVideos.push({ videoId, categoryId });
+    chrome.storage.local
+      .set({ NotInterestedVideos: notInterestedVideos })
+      .then(() => {
+        console.log('Not Interested Videos saved', notInterestedVideos);
+      });
+  });
+
+  return true;
+}
+
+async function deleteNotInterestedAction(videoId, headers) {
+  const categoryId = await fetchVideoCategories(videoId, headers);
+
+  chrome.storage.local.get(['NotInterestedVideos']).then((result) => {
+    let notInterestedVideos = result.NotInterestedVideos || [];
+    notInterestedVideos = notInterestedVideos.filter(
+      (item) => item.videoId !== videoId || item.categoryId !== categoryId
+    );
+    chrome.storage.local
+      .set({ NotInterestedVideos: notInterestedVideos })
+      .then(() => {
+        console.log('Not Interested Videos deleted', notInterestedVideos);
+      });
+  });
+
+  return true;
+}
+
 // Store recommendations to local storage
 async function storeRecommendations(
   generalRecommendations,
@@ -211,8 +245,10 @@ async function sendYTRequest(url, method, headers) {
 async function processYTAction(videoId, action, type, headers) {
   switch (action) {
     case 'notInterested':
+      await storeNotInterestedAction(videoId, headers);
       return handleNotInterested(videoId, type, headers);
     case 'cancelAction':
+      await deleteNotInterestedAction(videoId, headers);
       return handleCancel(videoId, type, headers);
     case 'retrieveThumbnail':
       if (type === 'video') {
