@@ -115,6 +115,15 @@ async function fetchVideoCategories(videoId, headers) {
   return data.items[0].snippet.categoryId;
 }
 
+async function fetchYTVideoByCategory(categoryId, headers) {
+  const result = await sendYTRequest(
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${categoryId}&maxResults=4`,
+    'GET',
+    headers
+  );
+  return await result.json();
+}
+
 async function fetchRecommendationsRelatedToVideoId(videoId) {
   return new Promise((resolve, reject) => {
     chrome.windows.create(
@@ -172,12 +181,13 @@ function extractRecommendations() {
   return recommendedURL;
 }
 
-async function storeNotInterestedAction(videoId, headers) {
+async function storeNotInterestedAction(videoId, relatedVideosIds, headers) {
   const categoryId = await fetchVideoCategories(videoId, headers);
+  const videoIdsDict = { [videoId]: relatedVideosIds };
 
   chrome.storage.local.get(['NotInterestedVideos']).then((result) => {
     let notInterestedVideos = result.NotInterestedVideos || [];
-    notInterestedVideos.push({ videoId, categoryId });
+    notInterestedVideos.push({ videoIdsDict, categoryId });
     chrome.storage.local
       .set({ NotInterestedVideos: notInterestedVideos })
       .then(() => {
@@ -194,7 +204,8 @@ async function deleteNotInterestedAction(videoId, headers) {
   chrome.storage.local.get(['NotInterestedVideos']).then((result) => {
     let notInterestedVideos = result.NotInterestedVideos || [];
     notInterestedVideos = notInterestedVideos.filter(
-      (item) => item.videoId !== videoId || item.categoryId !== categoryId
+      (item) =>
+        !(videoId in item.videoIdsDict) || item.categoryId !== categoryId
     );
     chrome.storage.local
       .set({ NotInterestedVideos: notInterestedVideos })
@@ -245,11 +256,9 @@ async function sendYTRequest(url, method, headers) {
 async function processYTAction(videoId, action, type, headers) {
   switch (action) {
     case 'notInterested':
-      await storeNotInterestedAction(videoId, headers);
-      return handleNotInterested(videoId, type, headers);
+      return handleNotInterested(videoId, headers);
     case 'cancelAction':
-      await deleteNotInterestedAction(videoId, headers);
-      return handleCancel(videoId, type, headers);
+      return handleCancel(videoId, headers);
     case 'retrieveThumbnail':
       if (type === 'video') {
         return fetchVideoThumbnail(videoId, headers);
@@ -258,31 +267,45 @@ async function processYTAction(videoId, action, type, headers) {
 }
 
 // Manage 'Not Interessed' actions
-async function handleNotInterested(videoId, type, headers) {
+async function handleNotInterested(videoId, headers) {
+  const categoryId = await fetchVideoCategories(videoId, headers);
+  const relatedVideosIds = (
+    await fetchYTVideoByCategory(categoryId, headers)
+  ).items.map((item) => item.id.videoId);
+
   const promises = [
-    sendNotInterested(videoId, headers),
-    sendDontRecommendChannel(videoId, headers),
-    //sendDislike(videoId, headers),
+    sendDislike(videoId, headers),
+    ...relatedVideosIds.map((id) => sendDislike(id, headers)),
   ];
 
-  if (type === 'video') {
-    promises.push(sendRemoveFromHistory(videoId, headers));
-  }
+  await storeNotInterestedAction(videoId, relatedVideosIds, headers);
 
   return await Promise.all(promises);
 }
 
 // Manage 'Cancel' actions
-async function handleCancel(videoId, type, headers) {
-  const promises = [
-    cancelNotInterested(videoId, headers),
-    cancelDontRecommendChannel(videoId, headers),
-    //cancelDislike(videoId, headers),
-  ];
+async function handleCancel(videoId, headers) {
+  const categoryId = await fetchVideoCategories(videoId, headers);
 
-  if (type === 'video') {
-    promises.push(cancelRemoveFromHistory(videoId, headers));
+  const notInterestedVideos = await chrome.storage.local.get([
+    'NotInterestedVideos',
+  ]);
+
+  relatedVideoIds = Array.from(notInterestedVideos).find(
+    (item) => videoId in item.videoIdsDict && item.categoryId === categoryId
+  );
+
+  if (relatedVideoIds) {
+    relatedVideoIds = relatedVideoIds.videoIdsDict[videoId];
+  } else {
+    relatedVideoIds = [];
   }
+
+  await deleteNotInterestedAction(videoId, headers);
+  const promises = [
+    cancelDislike(videoId, headers),
+    ...relatedVideoIds.map((id) => cancelDislike(id, headers)),
+  ];
 
   return await Promise.all(promises);
 }
@@ -316,6 +339,7 @@ async function sendDislike(videoId, headers) {
     'POST',
     headers
   );
+  console.log(`Feedback Sent : ${videoId}`);
   return result;
 }
 
@@ -326,6 +350,7 @@ async function cancelDislike(videoId, headers) {
     'POST',
     headers
   );
+  console.log(`Feedback Cancelled : ${videoId}`);
   return result;
 }
 

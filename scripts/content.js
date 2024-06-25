@@ -42,7 +42,7 @@ function createNotInterestedButton(className, clickHandler, isActivated) {
   const button = document.createElement('button');
   button.className = `not-interested-button ${className}`;
   button.style.display = isActivated ? 'none' : 'flex';
-  button.setAttribute('arial-label', 'Not Interested');
+  button.setAttribute('arial-label', 'Pas Intéressé');
 
   const buttonContainer = document.createElement('div');
   buttonContainer.className = 'not-interested-container';
@@ -53,10 +53,10 @@ function createNotInterestedButton(className, clickHandler, isActivated) {
     : 'assets/images/dash-circle.svg';
   icon.className = isActivated ? 'activate' : 'deactivate';
   icon.src = chrome.runtime.getURL(src);
-  icon.alt = 'Not Interested';
+  icon.alt = 'Pas Intéressé';
 
   const textParagraph = document.createElement('span');
-  textParagraph.textContent = 'Not Interested';
+  textParagraph.textContent = 'Pas Intéressé';
   textParagraph.className = 'not-interested-text';
 
   buttonContainer.appendChild(icon);
@@ -109,7 +109,7 @@ function createFeedbackBanner(className, thumbnailImgSrc, clickHandler) {
   textButton.className = 'text-button-container';
 
   const text = document.createElement('span');
-  text.textContent = 'You will receive less similar content.';
+  text.textContent = 'Vous receverez moins de contenus similaire.';
 
   const button = document.createElement('button');
   button.className = 'cancel-action-button';
@@ -195,7 +195,36 @@ function addButtonToThumbnail(thumbnail) {
 
   button.querySelector('span').style.display = 'none';
 
+  // Create tooltip element
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tooltip';
+  tooltip.textContent = 'Pas intéressé';
+
+  // Add mouseover event to show tooltip
+  button.addEventListener('mouseover', (event) => {
+    const rect = button.getBoundingClientRect();
+    tooltip.style.left = `${event.clientX}px`;
+    tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
+    tooltip.style.visibility = 'visible';
+    tooltip.style.opacity = '1';
+  });
+
+  // Add mousemove event to update tooltip position
+  button.addEventListener('mousemove', (event) => {
+    const rect = button.getBoundingClientRect();
+    tooltip.style.left = `${event.clientX}px`;
+    tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
+  });
+
+  // Add mouseout event to hide tooltip
+  button.addEventListener('mouseout', () => {
+    tooltip.style.visibility = 'hidden';
+    tooltip.style.opacity = '0';
+  });
+
+  // Append button and tooltip to the thumbnail
   thumbnail.appendChild(button);
+  document.body.appendChild(tooltip);
 }
 
 // Function to add feedback banner under engagement pannel
