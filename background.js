@@ -117,7 +117,7 @@ async function fetchVideoCategories(videoId, headers) {
 
 async function fetchYTVideoByCategory(categoryId, headers) {
   const result = await sendYTRequest(
-    `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${categoryId}&maxResults=4`,
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${categoryId}&maxResults=4&regionCode=BE&relevanceLanguage=fr`,
     'GET',
     headers
   );

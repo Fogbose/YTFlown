@@ -32,7 +32,7 @@ function getThumbnailVideoId(thumbnail) {
 
 // Get the image source for thumbnail of a video
 function getThumbnailImgSrc(videoId) {
-  return `https://img.youtube.com/vi/${videoId}/0.jpg`;
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 }
 
 //**************************************************************************** */
