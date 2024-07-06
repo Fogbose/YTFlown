@@ -1,30 +1,45 @@
 (function () {
-  const observer = new MutationObserver(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentVideoId = urlParams.get('v');
+  let processedRVLengths = new Set();
 
-    const recommendedVideos = Array.from(
-      document.querySelectorAll('#contents > ytd-compact-video-renderer')
-    )
-      .map((thumbnail) => {
-        const url = new URL(thumbnail.querySelector('a').href);
-        return url.searchParams.get('v');
-      })
-      .filter(Boolean);
+  function startObserving() {
+    const observer = new MutationObserver(() => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const currentVideoId = urlParams.get('v');
 
-    if (recommendedVideos.length === 20) {
-      chrome.runtime.sendMessage({
-        source: 'audit',
-        action: 'recommendations',
-        currentVideoId: currentVideoId,
-        videoIds: recommendedVideos,
-      });
+      const recommendedVideos = Array.from(
+        document.querySelectorAll('#contents > ytd-compact-video-renderer')
+      )
+        .map((thumbnail) => {
+          const url = new URL(thumbnail.querySelector('a').href);
+          return url.searchParams.get('v');
+        })
+        .filter(Boolean);
 
-      observer.disconnect();
-    }
-  });
+      if (
+        recommendedVideos.length % 20 === 0 &&
+        !processedRVLengths.has(recommendedVideos.length)
+      ) {
+        processedRVLengths.add(recommendedVideos.length);
+        chrome.runtime.sendMessage({
+          source: 'audit',
+          action: 'recommendations',
+          currentVideoId: currentVideoId,
+          videoIds: recommendedVideos.slice(-20),
+          videoCount: recommendedVideos.length,
+        });
+      }
+    });
 
-  const targetNode = document.getElementById('page-manager');
-  const observerConfig = { subtree: true, childList: true };
-  observer.observe(targetNode, observerConfig);
+    const targetNode = document.getElementById('page-manager');
+    const observerConfig = {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['href'],
+    };
+    observer.observe(targetNode, observerConfig);
+  }
+
+  // Attendre 2 secondes avant de démarrer l'observation
+  setTimeout(startObserving, 2000);
 })();

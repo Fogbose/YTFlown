@@ -8,18 +8,20 @@
   --hover-emphase-color: rgba(6, 95, 212, 0.1);
   --border-style: 2px solid #e5e5e5;
   --border-radius: 18px;
+  --box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   --font-family: 'Roboto', sans-serif;
   --h1-font-weight: 500;
   --h2-font-weight: 400;
-  --h1-font-size: 14px;
-  --h2-font-size: 12px;
-  --padding: 8px;
-  --inside-box-horizontal-margin: 0px 3px;
-  --outside-box-horizontal-margin: 0px 8px;
-  --outside-box-vertical-margin: 8px 0px;
-  --engagement-button-max-height: 36px;
-  --feedback-banner-max-height: 104px;
+  --h1-font-size: 16px;
+  --h2-font-size: 14px;
+  --padding: 12px;
+  --inside-box-horizontal-margin: 0px 5px;
+  --outside-box-horizontal-margin: 0px 10px;
+  --outside-box-vertical-margin: 10px 0px;
+  --engagement-button-max-height: 40px;
+  --feedback-banner-max-height: 120px;
   --feedback-banner-max-width: 100%;
+  --transition-duration: 0.3s;
 }
 
 /* 'Not Interested' button */
@@ -33,6 +35,7 @@
   display: flex;
   align-items: center;
   cursor: pointer;
+  transition: background-color var(--transition-duration);
 }
 
 .not-interested-button:hover {
@@ -74,26 +77,48 @@
   max-height: var(--feedback-banner-max-height);
   max-width: var(--feedback-banner-max-width);
   padding: var(--padding);
+  transition: transform var(--transition-duration),
+    opacity var(--transition-duration);
+  display: flex;
+  align-items: center;
 }
 
 .banner-primary-container {
   display: flex;
   flex-direction: row;
+  align-items: center;
 }
 
 .banner-primary-container img {
   border-radius: var(--border-radius);
   margin: var(--inside-box-horizontal-margin);
+  max-width: 60px;
+  max-height: 60px;
 }
 
 .middle-row .banner-primary-container img {
-  max-width: 320px;
-  max-height: 180px;
+  max-width: 240px;
+  max-height: 135px;
 }
 
 .thumbnail-banner img {
   max-width: 160px;
   max-height: 90px;
+}
+
+.middle-row .text-button-container {
+  display: flex;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  margin-left: 360px;
+}
+
+.middle-row .text-button-container span {
+  font-family: var(--font-family);
+  font-weight: var(--h1-font-weight);
+  font-size: var(--h1-font-size);
+  color: #333;
 }
 
 .text-button-container {
@@ -108,6 +133,8 @@
   font-family: var(--font-family);
   font-weight: var(--h2-font-weight);
   font-size: var(--h2-font-size);
+  margin-bottom: var(--padding);
+  text-align: center;
 }
 
 .cancel-action-button {
@@ -120,6 +147,7 @@
   font-weight: var(--h1-font-weight);
   font-size: var(--h1-font-size);
   cursor: pointer;
+  transition: background-color var(--transition-duration);
 }
 
 .cancel-action-button:hover {

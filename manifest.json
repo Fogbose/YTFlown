@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YTFlown",
-  "version": "1.1.0",
+  "version": "1.3.0",
   "description": "Chrome plugin for YouTube that makes mechanisms immediately available to the user to correct recommendations when they are wrong and give them a greater impact.",
 
   "permissions": [
@@ -52,7 +52,7 @@
   ],
 
   "oauth2": {
-    "client_id": "68548725295-8euag6qa2873dmei96ojo97t8ioj6i4u.apps.googleusercontent.com",
+    "client_id": "68548725295-8a023a8f3p76reejnq4se425u65ma561.apps.googleusercontent.com",
     "scopes": ["https://www.googleapis.com/auth/youtube.force-ssl"]
   }
 }

@@ -52,7 +52,11 @@ function createNotInterestedButton(className, clickHandler, isActivated) {
     ? 'assets/images/dash-circle-fill.svg'
     : 'assets/images/dash-circle.svg';
   icon.className = isActivated ? 'activate' : 'deactivate';
-  icon.src = chrome.runtime.getURL(src);
+  try {
+    icon.src = chrome.runtime.getURL(src);
+  } catch (error) {
+    console.error('Error loading image:', error);
+  }
   icon.alt = 'Pas Intéressé';
 
   const textParagraph = document.createElement('span');

@@ -47,26 +47,44 @@ async function handleAuditMessage(request, sender, sendResponse) {
     const token = await fetchAuthToken();
     const headers = createAuthHeaders(token);
 
-    if (request.action === 'recommendations') {
-      const vanillaRecommendationsIds =
-        await fetchRecommendationsRelatedToVideoId(request.currentVideoId);
+    const currentVideoId = request.currentVideoId;
 
-      const vanillaCategoryPromises = vanillaRecommendationsIds.map(
-        async (videoId) => {
-          const categoryId = await fetchVideoCategories(videoId, headers);
-          return { videoId, categoryId };
-        }
-      );
+    if (request.action === 'recommendations') {
+      if (request.videoCount <= 20) {
+        const vanillaRecommendationsIds =
+          await fetchRecommendationsRelatedToVideoId(request.currentVideoId);
+
+        const vanillaCategoryPromises = vanillaRecommendationsIds.map(
+          async (videoId) => {
+            const categoryId = await fetchVideoCategories(videoId, headers);
+            return { videoId, categoryId };
+          }
+        );
+
+        const vanillaVideoCategories = await Promise.all(
+          vanillaCategoryPromises
+        );
+
+        await storeRecommendations(
+          'GeneralRecommendations',
+          currentVideoId,
+          vanillaVideoCategories
+        );
+      }
 
       const categoryPromises = request.videoIds.map(async (videoId) => {
         const categoryId = await fetchVideoCategories(videoId, headers);
         return { videoId, categoryId };
       });
 
-      const vanillaVideoCategories = await Promise.all(vanillaCategoryPromises);
       const videoCategories = await Promise.all(categoryPromises);
 
-      await storeRecommendations(vanillaVideoCategories, videoCategories);
+      await storeRecommendations(
+        'CustomRecommendations',
+        currentVideoId,
+        videoCategories
+      );
+
       sendResponse({ action: 'actionCompleted' });
     }
   } catch (error) {
@@ -219,28 +237,34 @@ async function deleteNotInterestedAction(videoId, headers) {
 
 // Store recommendations to local storage
 async function storeRecommendations(
-  generalRecommendations,
-  customRecommendations
+  label,
+  currentVideoId,
+  videosWithCategories
 ) {
-  chrome.storage.local.get(['GeneralRecommendations']).then((result) => {
-    let generalData = result.GeneralRecommendations || [];
-    generalData.push(generalRecommendations);
-    chrome.storage.local
-      .set({ GeneralRecommendations: generalData })
-      .then(() => {
-        console.log('Random recommendations saved', generalData);
+  try {
+    const result = await chrome.storage.local.get([label]);
+    let data = result[label] || [];
+    let videoIdData = data.find(
+      (item) => item.currentVideoId === currentVideoId
+    );
+
+    if (videoIdData) {
+      videoIdData.recommendations.push(...videosWithCategories);
+    } else {
+      data.push({
+        currentVideoId: currentVideoId,
+        recommendations: videosWithCategories,
       });
-  });
+    }
 
-  chrome.storage.local.get(['CustomRecommendations']).then((result) => {
-    let customData = result.CustomRecommendations || [];
-    customData.push(customRecommendations);
-    chrome.storage.local.set({ CustomRecommendations: customData }).then(() => {
-      console.log('Custom recommendations saved', customData);
-    });
-  });
+    await chrome.storage.local.set({ [label]: data });
+    console.log('Recommendations saved', data);
 
-  return true;
+    return true;
+  } catch (error) {
+    console.error('Error storing recommendations:', error);
+    return false;
+  }
 }
 
 // Send a request to YouTube Data API v3
